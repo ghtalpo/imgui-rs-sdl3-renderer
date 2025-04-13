@@ -1,6 +1,6 @@
 [package]
 name = "imgui-sdl3-renderer"
-description = "imgui rendering backend for the sdl3 renderer"
+description = "Imgui rendering backend for the sdl3 renderer"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"

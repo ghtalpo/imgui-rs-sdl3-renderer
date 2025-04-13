@@ -61,6 +61,7 @@ impl Error for RenderError {
 
 pub struct Renderer<'a> {
     texture_map: imgui::Textures<sdl3::render::Texture<'a>>,
+    color_buffer: Vec<sdl3_sys::pixels::SDL_FColor>,
 }
 
 impl<'a> Renderer<'a> {
@@ -81,11 +82,14 @@ impl<'a> Renderer<'a> {
             .backend_flags
             .insert(imgui::BackendFlags::RENDERER_HAS_VTX_OFFSET);
 
-        Ok(Self { texture_map })
+        Ok(Self {
+            texture_map,
+            color_buffer: Vec::new(),
+        })
     }
 
     pub fn render(
-        &self,
+        &mut self,
         draw_data: &imgui::DrawData,
         canvas: &mut sdl3::render::Canvas<impl sdl3::render::RenderTarget>,
     ) -> RenderResult {
@@ -114,6 +118,7 @@ impl<'a> Renderer<'a> {
                     imgui::DrawCmd::Elements { count, cmd_params } => {
                         Self::render_elements(
                             &self.texture_map,
+                            &mut self.color_buffer,
                             canvas,
                             draw_list.vtx_buffer(),
                             draw_list.idx_buffer(),
@@ -142,6 +147,7 @@ impl<'a> Renderer<'a> {
     #[allow(clippy::too_many_arguments)]
     fn render_elements(
         texture_map: &imgui::Textures<sdl3::render::Texture<'a>>,
+        color_buffer: &mut Vec<sdl3_sys::pixels::SDL_FColor>,
         canvas: &mut sdl3::render::Canvas<impl sdl3::render::RenderTarget>,
         vertex_buffer: &[imgui::DrawVert],
         index_buffer: &[imgui::DrawIdx],
@@ -185,6 +191,7 @@ impl<'a> Renderer<'a> {
         let texture = texture_map.get(*texture_id);
         Self::render_raw_geometry(
             canvas,
+            color_buffer,
             texture,
             &vertex_buffer[*vtx_offset..],
             &index_buffer[*idx_offset..idx_offset + elem_count],
@@ -193,20 +200,19 @@ impl<'a> Renderer<'a> {
 
     fn render_raw_geometry(
         canvas: &mut sdl3::render::Canvas<impl sdl3::render::RenderTarget>,
+        color_buffer: &mut Vec<sdl3_sys::pixels::SDL_FColor>,
         texture: Option<&sdl3::render::Texture>,
         vertices: &[imgui::DrawVert],
         indices: &[imgui::DrawIdx],
     ) -> RenderResult {
         let vert_stride = size_of::<imgui::DrawVert>() as c_int;
-        let colors: Vec<_> = vertices
-            .iter()
-            .map(|vert| sdl3_sys::pixels::SDL_FColor {
-                r: vert.col[0] as f32 / 255_f32,
-                g: vert.col[1] as f32 / 255_f32,
-                b: vert.col[2] as f32 / 255_f32,
-                a: vert.col[3] as f32 / 255_f32,
-            })
-            .collect();
+        color_buffer.clear();
+        color_buffer.extend(vertices.iter().map(|vert| sdl3_sys::pixels::SDL_FColor {
+            r: vert.col[0] as f32 / 255_f32,
+            g: vert.col[1] as f32 / 255_f32,
+            b: vert.col[2] as f32 / 255_f32,
+            a: vert.col[3] as f32 / 255_f32,
+        }));
 
         let renderer = canvas.raw();
         let texture = texture.map_or(std::ptr::null_mut(), |texture| texture.raw());
@@ -218,7 +224,7 @@ impl<'a> Renderer<'a> {
             vertices.as_ptr().byte_add(offset_of!(imgui::DrawVert, uv)) as *const c_float
         };
         let idx = indices.as_ptr() as *const c_void;
-        let colors = colors.as_ptr();
+        let colors = color_buffer.as_ptr();
 
         unsafe {
             sdl3_sys::render::SDL_RenderGeometryRaw(
@@ -270,4 +276,3 @@ impl<'a> Renderer<'a> {
         Ok(())
     }
 }
-
