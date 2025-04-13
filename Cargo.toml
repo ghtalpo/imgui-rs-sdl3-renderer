@@ -4,6 +4,8 @@ description = "Imgui rendering backend for the sdl3 renderer"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
+repository = "https://github.com/masonjmj/imgui-rs-sdl3-renderer"
+homepage = "https://github.com/masonjmj/imgui-rs-sdl3-renderer"
 categories = ["gui", "rendering"]
 
 [dependencies]

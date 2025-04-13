@@ -1,3 +1,5 @@
+//! An [imgui] rendering backend to integrate with the [sdl3 renderer][sdl3::render]
+
 use imgui::internal::RawWrapper as _;
 use std::{
     error::Error,
@@ -8,6 +10,7 @@ use std::{
 
 type RenderResult = std::result::Result<(), RenderError>;
 
+/// A wrapper around various [sdl3] error types
 #[derive(Debug)]
 pub enum RenderError {
     UpdateTexture(sdl3::render::UpdateTextureError),
@@ -59,12 +62,38 @@ impl Error for RenderError {
     }
 }
 
+/// Represents the context for the renderer
 pub struct Renderer<'a> {
     texture_map: imgui::Textures<sdl3::render::Texture<'a>>,
     color_buffer: Vec<sdl3_sys::pixels::SDL_FColor>,
 }
 
 impl<'a> Renderer<'a> {
+    /// Constructs a new [Renderer]
+    ///
+    /// # Examples
+    /// Make sure to call after setting the imgui font.
+    /// ```
+    /// let sdl_context = sdl3::init().unwrap();
+    /// let video_subsystem = sdl_context.video().unwrap();
+    ///
+    /// let window = video_subsystem
+    ///     .window("rust-sdl3 example", 800, 600)
+    ///     .position_centered()
+    ///     .resizable()
+    ///     .high_pixel_density()
+    ///     .build()
+    ///     .unwrap();
+    /// let mut canvas = window.into_canvas();
+    /// let texture_creator = canvas.texture_creator();
+    ///
+    /// let mut imgui_context = imgui::Context::create();
+    /// imgui_context.set_ini_filename(None);
+    ///
+    /// imgui_context.fonts().add_font(&[imgui::FontSource::DefaultFontData { config: None, }]);
+    ///
+    /// let mut renderer = imgui_sdl3_renderer::Renderer::new(&texture_creator, &mut imgui_context).unwrap();
+    /// ```
     pub fn new(
         texture_creator: &'a sdl3::render::TextureCreator<impl std::any::Any>,
         imgui_context: &mut imgui::Context,
@@ -88,6 +117,34 @@ impl<'a> Renderer<'a> {
         })
     }
 
+    /// Renders the `draw_data` to the `canvas`
+    ///
+    /// <div class="warning">
+    ///
+    /// The `canvas` must be the canvas that owns the [TextureCreator] that was passed to
+    /// [Self::new] and must be the same canvas on each call
+    ///
+    /// </div>
+    ///
+    /// # Examples
+    /// ```ignore
+    /// /* ... */
+    /// let mut canvas = window.into_canvas();
+    /// let texture_creator = canvas.texture_creator();
+    ///
+    /// /* ... */
+    /// let mut renderer = imgui_sdl3_renderer::Renderer::new(&texture_creator, &mut imgui_context).unwrap();
+    ///
+    /// 'main loop {
+    /// canvas.clear();
+    /// /* ... */
+    /// let ui = imgui_context.new_frame();
+    /// ui.show_demo_window(&mut true);
+    /// renderer.render(imgui_context.render(), &mut canvas).unwrap();
+    /// /* ... */
+    /// canvas.present();
+    /// }
+    /// ```
     pub fn render(
         &mut self,
         draw_data: &imgui::DrawData,
@@ -105,9 +162,11 @@ impl<'a> Renderer<'a> {
 
         Self::set_up_render_state(canvas);
 
+        // Framebuffer scaling for HiDPI support
         let fb_width = draw_data.display_size[0] * draw_data.framebuffer_scale[0];
         let fb_height = draw_data.display_size[1] * draw_data.framebuffer_scale[1];
 
+        // Don't need to render if minimised
         if fb_width == 0_f32 || fb_height == 0_f32 {
             return Ok(());
         }
@@ -207,6 +266,7 @@ impl<'a> Renderer<'a> {
     ) -> RenderResult {
         let vert_stride = size_of::<imgui::DrawVert>() as c_int;
         color_buffer.clear();
+        // Normalize colours to SDL_Fcolor format 
         color_buffer.extend(vertices.iter().map(|vert| sdl3_sys::pixels::SDL_FColor {
             r: vert.col[0] as f32 / 255_f32,
             g: vert.col[1] as f32 / 255_f32,
@@ -276,3 +336,4 @@ impl<'a> Renderer<'a> {
         Ok(())
     }
 }
+
