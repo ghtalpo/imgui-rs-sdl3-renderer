@@ -1,0 +1,12 @@
+[package]
+name = "imgui-sdl3-renderer"
+description = "imgui rendering backend for the sdl3 renderer"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+categories = ["gui", "rendering"]
+
+[dependencies]
+imgui = "0.12.0"
+sdl3 = "0.14.22"
+sdl3-sys = "0.4.7"
