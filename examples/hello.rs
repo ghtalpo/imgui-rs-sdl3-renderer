@@ -1,9 +1,11 @@
 use sdl3::{
-    event::Event,
+    event::Event, pixels::Color, render::FRect
 };
 
+use imgui_sdl3_support::SdlPlatform;
+
 fn main() {
-    let sdl_context = sdl3::init().unwrap();
+    let mut sdl_context = sdl3::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
     println!("before create window");
@@ -35,6 +37,7 @@ fn main() {
 
     println!("before create imgui_context renderer");
 
+    let mut platform = SdlPlatform::new(&mut imgui_context);
     let mut renderer =
         imgui_sdl3_renderer::Renderer::new(&texture_creator, &mut imgui_context).unwrap();
 
@@ -46,7 +49,7 @@ fn main() {
         println!("begin loop");
         for event in event_pump.poll_iter() {
             /* pass all events to imgui platfrom */
-            // platform.handle_event(&mut imgui, &event);
+            platform.handle_event(&mut imgui_context, &event);
 
             if let Event::Quit { .. } = event {
                 break 'main;
@@ -55,7 +58,15 @@ fn main() {
 
         println!("mid0 loop");
 
+        platform.prepare_frame(&mut sdl_context, &mut imgui_context, &canvas.window(), &event_pump);
+
         canvas.clear();
+
+        let color_ = canvas.draw_color();
+        canvas.set_draw_color(Color::GREEN);
+        canvas.draw_rect(FRect::new(0.0, 0.0, 100.0, 100.0)).unwrap();
+        canvas.set_draw_color(color_);
+
         /* ... */
         let ui = imgui_context.new_frame();
         ui.show_demo_window(&mut true);
