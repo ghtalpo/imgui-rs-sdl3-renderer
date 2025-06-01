@@ -8,34 +8,24 @@ fn main() {
     let mut sdl_context = sdl3::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
-    println!("before create window");
-
     let window = video_subsystem
         .window("rust-sdl3 example", 800, 600)
         .opengl()
         .position_centered()
         .resizable()
-        // .high_pixel_density()
+        .high_pixel_density()
         .build()
         .unwrap();
-
-    // let _ = window.gl_set_context_to_current();
 
     let mut canvas = window.into_canvas();
     let texture_creator = canvas.texture_creator();
 
-    println!("before create imgui_context");
-    
     let mut imgui_context = imgui::Context::create();
     imgui_context.set_ini_filename(None);
-
-    println!("before create imgui_context add_font");
 
     imgui_context
         .fonts()
         .add_font(&[imgui::FontSource::DefaultFontData { config: None }]);
-
-    println!("before create imgui_context renderer");
 
     let mut platform = SdlPlatform::new(&mut imgui_context);
     let mut renderer =
@@ -43,10 +33,7 @@ fn main() {
 
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    println!("before entering loop");
-
     'main: loop {
-        println!("begin loop");
         for event in event_pump.poll_iter() {
             /* pass all events to imgui platfrom */
             platform.handle_event(&mut imgui_context, &event);
@@ -55,8 +42,6 @@ fn main() {
                 break 'main;
             }
         }
-
-        println!("mid0 loop");
 
         platform.prepare_frame(&mut sdl_context, &mut imgui_context, &canvas.window(), &event_pump);
 
@@ -75,6 +60,5 @@ fn main() {
             .unwrap();
         /* ... */
         canvas.present();
-        println!("begin end");
     }
 }
